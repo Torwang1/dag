@@ -52,18 +52,14 @@ func (d *DAG) AddVertex(v *Vertex) error {
 // DeleteVertex deletes a vertex and all the edges referencing it from the
 // graph.
 func (d *DAG) DeleteVertex(vertex *Vertex) error {
-	existsVertex := false
+	if vertex == nil {
+		return fmt.Errorf("Vertex is nil")
+	}
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Check if vertices exists.
-	for _, v := range d.vertices.Values() {
-		if v == vertex {
-			existsVertex = true
-		}
-	}
-	if !existsVertex {
+	if _, exist := d.vertices.Get(vertex.ID); !exist {
 		return fmt.Errorf("Vertex with ID %v not found", vertex.ID)
 	}
 
@@ -74,33 +70,27 @@ func (d *DAG) DeleteVertex(vertex *Vertex) error {
 
 // AddEdge adds a directed edge between two existing vertices to the graph.
 func (d *DAG) AddEdge(tailVertex *Vertex, headVertex *Vertex) error {
-	tailExists := false
-	headExists := false
+	if tailVertex == nil {
+		return fmt.Errorf("tail vertex is nil")
+	}
+	if headVertex == nil {
+		return fmt.Errorf("head vertex is nil")
+	}
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	// Check if vertices exists.
-	for _, vertex := range d.vertices.Values() {
-		if vertex == tailVertex {
-			tailExists = true
-		}
-		if vertex == headVertex {
-			headExists = true
-		}
-	}
-	if !tailExists {
+	if _, exist := d.vertices.Get(tailVertex.ID); !exist {
 		return fmt.Errorf("Vertex with ID %v not found", tailVertex.ID)
 	}
-	if !headExists {
+	if _, exist := d.vertices.Get(headVertex.ID); !exist {
 		return fmt.Errorf("Vertex with ID %v not found", headVertex.ID)
 	}
 
 	// Check if edge already exists.
-	for _, childVertex := range tailVertex.Children.Values() {
-		if childVertex == headVertex {
-			return fmt.Errorf("Edge (%v,%v) already exists", tailVertex.ID, headVertex.ID)
-		}
+	if tailVertex.Children.Contains(headVertex) {
+		return fmt.Errorf("Edge (%v,%v) already exists", tailVertex.ID, headVertex.ID)
 	}
 
 	// Add edge.
@@ -113,12 +103,9 @@ func (d *DAG) AddEdge(tailVertex *Vertex, headVertex *Vertex) error {
 // DeleteEdge deletes a directed edge between two existing vertices from the
 // graph.
 func (d *DAG) DeleteEdge(tailVertex *Vertex, headVertex *Vertex) error {
-	for _, childVertex := range tailVertex.Children.Values() {
-		if childVertex == headVertex {
-			tailVertex.Children.Remove(childVertex)
-		}
+	if tailVertex.Children.Contains(headVertex) {
+		tailVertex.Children.Remove(headVertex)
 	}
-
 	return nil
 }
 
